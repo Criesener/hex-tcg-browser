@@ -15,8 +15,11 @@ Operation and filters follow [vs.tcgbrowser.com](https://vs.tcgbrowser.com/#!/ca
 Cards are drawn with the client's original card-frame sprites: threshold gems,
 gem sockets, PvE ornaments and ATK/DEF circles.
 
-> No game assets are part of this repository. Images and data are extracted
-> locally from your own installation of the HEX client.
+> Apart from the screenshots below, no game assets are part of this repository.
+> Images and data are extracted locally from your own installation of the HEX
+> client.
+
+![Card grid with filters](docs/screenshots/cards.png)
 
 ## Features
 
@@ -34,6 +37,20 @@ gem sockets, PvE ornaments and ATK/DEF circles.
 - **CSV export:** of any filtered list, or of what is missing.
 - **Admin mode** (optional, off by default): grant cards and items to an
   account, see below.
+
+## Screenshots
+
+**Card detail:** the in-game frame with a gem socket, obtain sources,
+equipment, other versions, and a grant dry run in admin mode. Granting is
+blocked here because the hex-server is running.
+
+![Card detail with admin grant](docs/screenshots/card-detail-admin.png)
+
+| | |
+|---|---|
+| **Equipment** ![Equipment grid](docs/screenshots/equipment.png) | **Equipment detail**, with the cards it upgrades ![Equipment detail](docs/screenshots/equipment-detail.png) |
+| **Mercenaries** ![Mercenary grid](docs/screenshots/mercenaries.png) | **Mercenary detail**, a historical convention reward ![Mercenary detail](docs/screenshots/mercenary-detail.png) |
+| **Sleeves** ![Sleeve grid](docs/screenshots/sleeves.png) | **Battleboards** ![Battleboards](docs/screenshots/battleboards.png) |
 
 ## How it fits together
 
