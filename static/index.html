@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HexTcgBrowser</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpolygon points='16,2 29,9 29,23 16,30 3,23 3,9' fill='%23d4a94a'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#!/cards">HEX<span>TcgBrowser</span></a>
+    <nav id="nav">
+      <a href="#!/cards" data-view="cards">Cards</a>
+      <a href="#!/equipment" data-view="equipment">Equipment</a>
+      <a href="#!/mercenaries" data-view="mercenaries">Mercenaries</a>
+      <a href="#!/sleeves" data-view="sleeves">Sleeves</a>
+      <a href="#!/other" data-view="other">Other</a>
+      <a href="#!/collection" data-view="collection">Collection</a>
+      <a href="#!/decks" data-view="decks">Decks</a>
+    </nav>
+    <label class="account">
+      <span>Account</span>
+      <select id="account"><option value="">— none —</option></select>
+    </label>
+  </header>
+  <main id="main"></main>
+  <div id="modal" class="modal" hidden></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
