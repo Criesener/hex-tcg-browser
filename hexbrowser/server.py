@@ -17,7 +17,7 @@ from fastapi import Body, Depends, FastAPI, HTTPException, Path, Query
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from . import account, admin, config, thumbs
+from . import account, admin, config, revival, thumbs
 
 app = FastAPI(title="HexTcgBrowser")
 
@@ -375,6 +375,7 @@ def grant_plan(account_id, items, query, max_items=5000):
     items: [{"guid", "qty"}] explicit grants; query: item filters (as for
     /api/items) whose items are filled up to max_copies for the account."""
     uid = user_or_404(account_id)
+    kinds = revival.GRANT_KINDS if revival.is_revival(uid) else admin.INVENTORY_KINDS
     plan = []
     if query is not None:
         f = dict(FILTER_DEFAULTS)
@@ -400,7 +401,7 @@ def grant_plan(account_id, items, query, max_items=5000):
         if r["kind"] == "card" and not r["collectible"]:
             raise HTTPException(400, f"{r['name']} is not a collectible card")
         plan.append((r["guid"], r["kind"], int(it.get("qty") or 1), r["name"]))
-    plan = [p for p in plan if p[2] > 0 and (p[1] == "card" or p[1] in admin.INVENTORY_KINDS)]
+    plan = [p for p in plan if p[2] > 0 and (p[1] == "card" or p[1] in kinds)]
     if len(plan) > max_items:
         raise HTTPException(400, f"{len(plan)} items: narrow the filter (limit {max_items})")
     return uid, plan
@@ -419,16 +420,19 @@ if admin.ENABLED:
         """Grant explicit items and/or fill up everything matching query.
         dry_run returns the plan without writing."""
         uid, plan = grant_plan(account_id, items, query)
+        rev = revival.is_revival(uid)
         summary = {"entries": len(plan),
                    "cards": sum(p[2] for p in plan if p[1] == "card"),
                    "items": sum(p[2] for p in plan if p[1] != "card"),
                    "sample": [f"{p[2]}× {p[3]}" for p in plan[:8]],
-                   "server_running": admin.server_running()}
+                   "target": "revival" if rev else "server",
+                   "server_running": revival.game_running(uid) if rev else admin.server_running()}
         if dry_run:
             return summary
+        entries = [(g, k, q) for g, k, q, _ in plan]
         try:
-            result = admin.grant(uid, [(g, k, q) for g, k, q, _ in plan])
-        except admin.AdminError as e:
+            result = revival.grant(uid, entries) if rev else admin.grant(uid, entries)
+        except (admin.AdminError, revival.GrantError) as e:
             raise HTTPException(409, str(e))
         return {**summary, **result, "server_running": None}
 

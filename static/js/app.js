@@ -38,8 +38,11 @@ async function init() {
     main.innerHTML = `<section><h1>Server error</h1><p class="error">${esc(e.message)}</p></section>`;
     return;
   }
-  sel.innerHTML += state.accounts.map(a =>
-    `<option value="${esc(a.id)}">${esc(a.name)} (${a.distinct_cards} cards)</option>`).join("");
+  const option = a => `<option value="${esc(a.id)}">${esc(a.name)} (${a.unlock_all ? "all unlocked" : `${a.distinct_cards} cards · ${a.card_copies.toLocaleString("en")} copies`})</option>`;
+  sel.innerHTML += [["server", "hex-server"], ["revival", "HEX Revival"]].map(([source, label]) => {
+    const group = state.accounts.filter(a => a.source === source);
+    return group.length ? `<optgroup label="${label}">${group.map(option).join("")}</optgroup>` : "";
+  }).join("");
   if (!state.accounts.some(a => a.id === state.account)) state.account = "";
   sel.value = state.account;
   sel.addEventListener("change", () => {

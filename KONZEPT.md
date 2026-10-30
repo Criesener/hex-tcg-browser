@@ -182,3 +182,27 @@ Hash-Router im Stil des Vorbilds:
   - Alle Karten bekommen rechts die Runenleiste `GemBar`, wie im Original. PvE-Karten bekommen statt `TitleBar` die Titelleiste mit Goldranke `TitleBarPVE_1` und dazu die Ranke `TitleBarPVE_2`.
   - Gem-Sockel: Die Anzahl kommt aus `m_SocketCount`; ob Major oder Minor, wird aus „Socketable Major/Minor“ im Kartentext gelesen (Major oben, Rest Minor). Sie liegen mittig auf der Runenleiste: einzeln bei 37,9 % der Höhe, zwei im Abstand von 6,3 % um 37,5 %, gemessen an Client-Screenshots. Grafiken: `GemSocket_Major` (Bronze) und `GemSocket_Minor` (Silber).
   - ATK/DEF-Zahlen sitzen auf dem deckenden Kreis von `AtkDefFrame` (x 0–82, y 7–88 von 88 px, der Rest ist Schatten). Der rechte Kreis wird gespiegelt.
+
+---
+
+## 9. HEX-Revival-Spielstände als zweite Account-Quelle
+- `hexbrowser/revival.py` liest die Spielstände des Mods HEX Revival nur lesend.
+  - **Pfade:** Offline-Accounts liegen in `HEX_REVIVAL_SAVES`, mehrere Installationen getrennt durch `:` (Standard: Steam-Installation `…/steamapps/common/HEX SHARDS OF FATE/…`, `/Volumes/Games/HEX-Revival/…` und `/Volumes/Games/HEX-Test-Mac/…`). Der Online-Account liegt jeweils in `HexRevivalOnline` daneben.
+  - **IDs:** `rev:<Installation>:<Ordner>` bzw. `rev:<Installation>:online`. `resolve()` akzeptiert auch den bloßen Ordnernamen, wenn er eindeutig ist.
+- **Formate:**
+  - `account.txt`: `key=value`; `unlock=1` heißt, alles ist freigeschaltet. `lastplayed` steht in .NET-Ticks.
+  - `collection.txt`: `<guid> <anzahl>`.
+  - `inventory.txt`: `<guid> <anzahl>` für Equipment, Sleeves, Packs und Stardust. Stardust wird zusätzlich als Stardust des Accounts angezeigt.
+  - `chests.txt`: `<id> <?> <?> <?> <set-guid>`, nicht ausgewertet.
+  - `decks.txt`: Blöcke aus `DECK|id|name|?|champion|sleeve|board|coin|…`, `CARDS|guid,…` mit einer GUID pro Kopie, sowie `SIDE|`, `EQUIP|` und `TALENT|`.
+  - `champions.txt`: `id|name|level|…`.
+- `account.py` delegiert jede Funktion bei `rev:`-IDs an `revival.py`. `list_accounts()` liefert beide Quellen mit dem Feld `source`, die API bleibt unverändert.
+- **Bei `unlock=1`:** Besessen sind alle sammelbaren Karten (`max_copies`) und alle Equipment-Items. Das entspricht der README des Mods („every card (4 copies) … and every equipment“).
+- **Grenzen:**
+  - Die Spielstände enthalten keine Mercenaries.
+  - `online_profile.json` wird nie gelesen.
+- **Admin-Grant für Revival-Accounts** (`revival.grant`):
+  - **Ziel:** Karten gehen nach `collection.txt`. Equipment, Sleeves, Mercenaries und Packs gehen nach `inventory.txt` (`GRANT_KINDS`, die Arten, die der Mod dort speichert). Bestehende Zeilen werden hochgezählt, neue GUIDs angehängt, geschrieben wird atomar über eine `.tmp`-Datei.
+  - **Gesperrt, solange `Hex.app` aus derselben Installation läuft:** geprüft per `ps`. Das Spiel hält den Account im Speicher und überschreibt die Dateien beim nächsten Speichern.
+  - **Backup:** vorher nach `cache/revival-backups/<Installation>/<Account>/<Zeit>/`. Protokoll in `cache/admin.log`.
+  - **Accounts mit `unlock=1`:** abgelehnt, sie haben ohnehin alles.

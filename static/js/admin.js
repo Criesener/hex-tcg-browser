@@ -1,17 +1,24 @@
 // Admin mode (./run.sh --admin): grant items to the selected account.
 // Every grant is a dry run first, confirmed in an inline panel.
+// HEX Revival accounts ("rev:..." ids) get their save files written instead
+// of the server DB, for fewer item kinds, and not when everything is unlocked.
 import { esc, post, state } from "./util.js";
 
-export const adminOn = () => Boolean(state.meta?.admin && state.account);
+const account = () => state.accounts.find(a => a.id === state.account);
+const isRevival = () => state.account.startsWith("rev:");
+
+export const adminOn = () => Boolean(state.meta?.admin && state.account && !account()?.unlock_all);
 
 const INVENTORY_KINDS = new Set(["equipment", "mercenary", "sleeve", "gameboard", "coin", "gem", "pack", "starter", "chest"]);
+const REVIVAL_KINDS = new Set(["equipment", "mercenary", "sleeve", "pack"]);
 
 export function grantable(item) {
-  return item.kind === "card" ? Boolean(item.collectible) : INVENTORY_KINDS.has(item.kind);
+  if (item.kind === "card") return Boolean(item.collectible);
+  return (isRevival() ? REVIVAL_KINDS : INVENTORY_KINDS).has(item.kind);
 }
 
 function accountName() {
-  return state.accounts.find(a => a.id === state.account)?.name || state.account;
+  return account()?.name || state.account;
 }
 
 export function toast(message, cls = "") {
@@ -47,9 +54,13 @@ export async function confirmGrant(box, request) {
   box.innerHTML = `
     <p>Grant <strong>${what}</strong> (${plan.entries} entr${plan.entries === 1 ? "y" : "ies"}) to <strong>${esc(accountName())}</strong>:</p>
     <ul>${plan.sample.map(s => `<li>${esc(s)}</li>`).join("")}${more}</ul>
-    ${plan.server_running
-      ? `<p class="warn">The hex-server is running (${esc(plan.server_running)}). Stop it first with <code>./server/hex-server.sh stop</code>, otherwise it would overwrite the change.</p>`
-      : `<p class="hint">The hex-server is stopped. hconnect.db is backed up before writing.</p>`}
+    ${plan.target === "revival"
+      ? plan.server_running
+        ? `<p class="warn">${esc(plan.server_running)}. Quit the game first, otherwise it would overwrite the change on its next save.</p>`
+        : `<p class="hint">The game is closed. collection.txt and inventory.txt are backed up before writing.</p>`
+      : plan.server_running
+        ? `<p class="warn">The hex-server is running (${esc(plan.server_running)}). Stop it first with <code>./server/hex-server.sh stop</code>, otherwise it would overwrite the change.</p>`
+        : `<p class="hint">The hex-server is stopped. hconnect.db is backed up before writing.</p>`}
     <div class="adminbtns">
       <button type="button" class="primary" data-admin="go"${plan.server_running ? " disabled" : ""}>Grant</button>
       <button type="button" data-admin="recheck">Check again</button>

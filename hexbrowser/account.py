@@ -5,12 +5,15 @@ The DB is opened with mode=ro, so it can be read while the server runs
 card_instances, which is what the server pushes to the client at login;
 the collections table is only compared against it (see discrepancies).
 User ids are 64-bit and are passed around as strings for the browser.
+
+Accounts of the HEX Revival mod ("rev:..." ids) are read from its save files
+instead, see revival.py; every public function here dispatches on the id.
 """
 import json
 import sqlite3
 from contextlib import contextmanager
 
-from . import config
+from . import config, revival
 from .gamedata import NULL_GUID
 
 
@@ -30,6 +33,12 @@ def connect():
 
 
 def list_accounts():
+    return _server_accounts() + revival.list_accounts()
+
+
+def _server_accounts():
+    if not config.SERVER_DB.is_file():
+        return []
     with connect() as db:
         users = db.execute(
             "SELECT id, name, gold, platinum, level, experience, last_login, created_at "
@@ -46,7 +55,7 @@ def list_accounts():
                 "id": str(u["id"]), "name": u["name"], "gold": u["gold"],
                 "platinum": u["platinum"], "level": u["level"],
                 "experience": u["experience"], "last_login": u["last_login"],
-                "created_at": u["created_at"],
+                "created_at": u["created_at"], "source": "server",
                 "distinct_cards": cards[0], "card_copies": cards[1],
                 "champions": [{"name": c["champion_name"], "level": c["level"],
                                "xp": c["xp"], "deleted": bool(c["is_deleted"])}
@@ -60,16 +69,21 @@ def get_account(user_id):
 
 
 def resolve(id_or_name):
-    """User id (as string) for a numeric id or a login name, else None."""
+    """User id (as string) for a numeric id or a login name, else None.
+    Server accounts win over HEX Revival folders of the same name."""
+    if revival.is_revival(id_or_name) or not config.SERVER_DB.is_file():
+        return revival.resolve(id_or_name)
     with connect() as db:
         row = db.execute("SELECT id FROM users WHERE name = ?", (id_or_name,)).fetchone()
         if row is None and id_or_name.isdigit():
             row = db.execute("SELECT id FROM users WHERE id = ?", (int(id_or_name),)).fetchone()
-    return str(row[0]) if row else None
+    return str(row[0]) if row else revival.resolve(id_or_name)
 
 
 def ownership(user_id):
     """{template guid: {"qty": copies, "ext": extended-art copies}} for cards and items."""
+    if revival.is_revival(user_id):
+        return revival.ownership(user_id)
     uid = int(user_id)
     owned = {}
     with connect() as db:
@@ -86,6 +100,8 @@ def ownership(user_id):
 
 
 def stardust(user_id):
+    if revival.is_revival(user_id):
+        return revival.stardust(user_id)
     with connect() as db:
         return {r["rarity"]: r["quantity"] for r in db.execute(
             "SELECT rarity, quantity FROM stardust WHERE user_id=?", (int(user_id),))}
@@ -93,6 +109,8 @@ def stardust(user_id):
 
 def discrepancies(user_id):
     """Cards whose collections.quantity differs from the number of card_instances."""
+    if revival.is_revival(user_id):
+        return []
     with connect() as db:
         rows = db.execute(
             "SELECT c.card_template_id AS guid, c.quantity AS collection_qty, "
@@ -104,6 +122,8 @@ def discrepancies(user_id):
 
 def decks(user_id):
     """Decks with resolved cards; deck.cards holds card GUIDs or instance ids."""
+    if revival.is_revival(user_id):
+        return revival.decks(user_id)
     uid = int(user_id)
     with connect() as db:
         instances = {r[0]: r[1] for r in db.execute(
